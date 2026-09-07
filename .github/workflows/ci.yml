@@ -23,12 +23,14 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Check types
         run: bun run typecheck
+      - name: Lint code
+        run: bun run lint
       - name: Run tests
         run: bun test
       - name: Build package
         run: bun run check:build
       - name: Check package contents
-        run: npm pack --dry-run
+        run: bun run check:package
 
   current-opencode-beta:
     runs-on: ubuntu-latest

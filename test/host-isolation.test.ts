@@ -28,7 +28,9 @@ describe("host isolation", () => {
   })
 
   test("keeps host adapters out of shared modules", async () => {
-    for (const path of ["contracts.ts", "core.ts", "file-savings-store.ts", "service.ts", "shell-read.ts"]) {
+    const root = new URL("../src", import.meta.url).pathname
+    for await (const path of new Bun.Glob("**/*.ts").scan({ cwd: root })) {
+      if (path === "index.ts" || /^(?:codex|opencode|pi)\//.test(path)) continue
       const source = await Bun.file(new URL(`../src/${path}`, import.meta.url)).text()
       expect(source, path).not.toMatch(/from ["'].+(?:codex|opencode|pi)\//)
       expect(source, path).not.toContain("@opencode-ai/plugin")

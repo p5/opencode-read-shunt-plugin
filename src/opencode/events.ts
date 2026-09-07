@@ -1,27 +1,9 @@
 import { isRecord, selectCandidate, type ReadCandidate, type Replacement } from "../core.js"
+import { parseBroadShellRead } from "../shell-read.js"
 import type { OpenCodeConfig } from "./config.js"
+import type { BeforeToolEvent, CompletedToolEvent } from "./contracts.js"
 
-export type ToolResult = {
-  output?: unknown
-  content?: unknown
-  metadata?: Readonly<Record<string, unknown>>
-}
-
-export type CompletedToolEvent = {
-  tool: string
-  sessionID: string
-  agent: string
-  status: "completed"
-  input: unknown
-  result: ToolResult
-}
-
-export type BeforeToolEvent = {
-  tool: string
-  sessionID: string
-  agent: string
-  input: unknown
-}
+export type { BeforeToolEvent, CompletedToolEvent } from "./contracts.js"
 
 export type OpenCodeCandidate = {
   candidate: ReadCandidate
@@ -53,17 +35,7 @@ export function bashReadPath(event: BeforeToolEvent, config: OpenCodeConfig): st
   if (event.tool !== "bash" || !config.allowedAgents.includes(event.agent)) return
   if (!isRecord(event.input) || typeof event.input.command !== "string") return
 
-  const command = event.input.command.trim()
-  if (!command || command.includes("|") || command.includes(">")) return
-
-  const match = /^(?:cat|head|tail|less|more)\s+(.+)$/.exec(command)
-  if (!match) return
-
-  const path = match[1]!
-    .split(/\s+/)
-    .find((argument) => !argument.startsWith("-"))
-    ?.replaceAll(/["']/g, "")
-  return path || undefined
+  return parseBroadShellRead(event.input.command)?.path
 }
 
 export function applyReplacement(
@@ -95,6 +67,7 @@ export function parseSessionTask(messages: readonly unknown[]): string | undefin
       return message.text.slice(0, 2_000)
     }
   }
+  return undefined
 }
 
 function parseTextContent(content: unknown): { text: string; usesParts: boolean } | undefined {

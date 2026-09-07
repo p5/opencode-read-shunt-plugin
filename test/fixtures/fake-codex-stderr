@@ -1,0 +1,6 @@
+#!/bin/sh
+while IFS= read -r line; do
+  :
+done
+dd if=/dev/zero bs=1024 count=256 1>&2 2>/dev/null
+exit 1

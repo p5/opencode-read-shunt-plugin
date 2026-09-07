@@ -7,6 +7,3 @@ const plugin = Plugin.define({
 })
 
 export default plugin
-export * from "./contracts.js"
-export * from "./core.js"
-export * from "./service.js"

@@ -1,11 +1,6 @@
-import type { ReadCandidate, Replacement, SessionSavings, ShuntPolicyConfig } from "./core.js"
+import type { ReadCandidate, Replacement, SessionSavings } from "./core.js"
 
 export type HostName = "codex" | "opencode" | "pi"
-
-export interface HostAdapter<TInput, TOutput> {
-  readonly host: HostName
-  handle(input: TInput): Promise<TOutput>
-}
 
 export type SummaryRequest = {
   candidate: ReadCandidate
@@ -33,10 +28,15 @@ export type WorkerUsage = {
   cost?: number
 }
 
-export interface SavingsStore {
-  load(sessionID: string): Promise<SessionSavings>
-  save(sessionID: string, savings: SessionSavings): Promise<void>
-  record(entry: SavingsEntry): Promise<void>
+export interface SessionSavingsStore {
+  update<T>(
+    sessionID: string,
+    operation: (current: SessionSavings) => { savings: SessionSavings; value: T },
+  ): Promise<T>
+}
+
+export interface SavingsLog {
+  append(entry: SavingsEntry): Promise<void>
 }
 
 export type SavingsEntry = {
@@ -59,11 +59,9 @@ export type SavingsEntry = {
 }
 
 export type ShuntRequest = {
-  host: HostName
   sessionID: string
   task: string
   candidate: ReadCandidate
-  config: ShuntPolicyConfig
 }
 
 export type ShuntResult = {

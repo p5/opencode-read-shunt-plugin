@@ -85,7 +85,7 @@ export function createReplacement(
     }
     text = [
       `[read-shunt: ${originalChars} chars reduced; ${Math.max(0, savedChars)} main-context chars avoided]`,
-      `[session: ${session.shunts} shunts; about ${estimateTokens(session.savedChars)} main-context tokens avoided]`,
+      `[session estimate: ${session.shunts} shunts; about ${estimateTokens(session.savedChars)} main-context tokens avoided]`,
       "[exact follow-up reads with offset or limit bypass read-shunt]",
       summary,
     ].join("\n")
@@ -104,18 +104,6 @@ export function createReplacement(
     savedChars,
     estimatedSavedTokens: estimateTokens(savedChars),
     session,
-  }
-}
-
-export async function withTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout> | undefined
-  const expired = new Promise<never>((_, reject) => {
-    timeout = setTimeout(() => reject(new Error(`generation timed out after ${timeoutMs} ms`)), timeoutMs)
-  })
-  try {
-    return await Promise.race([operation, expired])
-  } finally {
-    if (timeout) clearTimeout(timeout)
   }
 }
 

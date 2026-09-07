@@ -61,6 +61,8 @@ export READ_SHUNT_CODEX_MODEL="gpt-5.6-sol"
 
 The worker uses `--ignore-user-config`. This prevents nested plugin and hook execution.
 It still uses existing Codex authentication.
+The worker runs in an empty temporary directory. Codex CLI does not provide a no-tools option.
+The read-only sandbox can still permit absolute reads outside that directory.
 
 ## Install for Pi
 
@@ -157,6 +159,8 @@ Set environment variables before you start Codex:
 | `READ_SHUNT_TIMEOUT_MS` | `30000` |
 | `READ_SHUNT_STATS_FILE` | Host state directory |
 
+Codex caps the worker timeout at 40 seconds. The outer hook stops after 45 seconds.
+
 ## Pi configuration
 
 Add global settings to `~/.pi/agent/read-shunt.json`.
@@ -198,6 +202,7 @@ Each shunt writes one console line. It also appends JSON to:
 - Pi: `~/.local/state/pi/read-shunt/read-shunt.jsonl`
 
 Each replacement reports current and session estimates. Estimates cover avoided main-context input only.
+Concurrent Codex hooks can overwrite a session update. Codex session totals are best-effort estimates.
 OpenCode and Codex logs do not include worker usage. Pi logs include worker tokens and cost.
 Result-size estimates do not prove net cost savings.
 

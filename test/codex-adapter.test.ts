@@ -3,16 +3,12 @@ import { mkdir, mkdtemp, readFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { SummaryRequest, SummaryResult, SummaryWorker } from "../src/contracts"
-import {
-  CodexAdapter,
-  buildCodexArguments,
-  codexCandidate,
-  isBroadReadCommand,
-  parseCodexOutput,
-  loadCodexConfig,
-  resolveCodexConfig,
-  type CodexHookInput,
-} from "../src/codex/adapter"
+import { CodexAdapter } from "../src/codex/adapter"
+import { codexCandidate, type CodexHookInput } from "../src/codex/candidate"
+import { loadCodexConfig, resolveCodexConfig } from "../src/codex/config"
+import { readCurrentTask } from "../src/codex/transcript"
+import { buildCodexArguments, parseCodexOutput } from "../src/codex/worker"
+import { CodexCliSummaryWorker } from "../src/codex/worker"
 
 const largeOutput = "export function value() { return 42 }\n".repeat(500)
 
@@ -53,7 +49,7 @@ describe("Codex adapter", () => {
 
     expect(output?.decision).toBe("block")
     expect(output?.reason).toContain("`value`, line 1")
-    expect(output?.reason).toContain("session: 1 shunts")
+    expect(output?.reason).toContain("session estimate: 1 shunts")
     const entry = JSON.parse((await readFile(settings.statsFile, "utf8")).trim())
     expect(entry).toMatchObject({ host: "codex", model: "openai/test-codex", sessionShunts: 1 })
   })
@@ -78,15 +74,6 @@ describe("Codex adapter", () => {
     const settings = await config()
     expect(codexCandidate(event("cat AGENTS.md"), settings)).toBeUndefined()
     expect(codexCandidate(event("cat path/to/SKILL.md"), settings)).toBeUndefined()
-  })
-
-  test("accepts only simple broad read commands", () => {
-    expect(isBroadReadCommand("cat file.ts")).toBeTrue()
-    expect(isBroadReadCommand("cat -n file.ts")).toBeTrue()
-    expect(isBroadReadCommand("less file.ts")).toBeTrue()
-    expect(isBroadReadCommand("cat one.ts two.ts")).toBeFalse()
-    expect(isBroadReadCommand("cat file.ts; git status")).toBeFalse()
-    expect(isBroadReadCommand("sed -n '1,20p' file.ts")).toBeFalse()
   })
 
   test("parses final Codex worker message", () => {
@@ -122,6 +109,38 @@ describe("Codex adapter", () => {
     expect(resolveCodexConfig({ READ_SHUNT_CODEX_REASONING_EFFORT: "invalid" }).reasoningEffort).toBe("low")
   })
 
+  test("keeps generation inside the hook timeout", () => {
+    expect(resolveCodexConfig({ READ_SHUNT_TIMEOUT_MS: "60000" }).generationTimeoutMs).toBe(40_000)
+  })
+
+  test("times out the complete Codex process lifecycle", async () => {
+    const settings = resolveCodexConfig({
+      READ_SHUNT_CODEX_COMMAND: join(import.meta.dir, "fixtures", "fake-codex-hang"),
+    })
+    const worker = new CodexCliSummaryWorker(settings)
+    const startedAt = performance.now()
+
+    await expect(worker.summarize(summaryRequest(30))).rejects.toThrow("generation timed out after 30 ms")
+    expect(performance.now() - startedAt).toBeLessThan(1_000)
+  })
+
+  test("drains large Codex error output without deadlock", async () => {
+    const settings = resolveCodexConfig({
+      READ_SHUNT_CODEX_COMMAND: join(import.meta.dir, "fixtures", "fake-codex-stderr"),
+    })
+    const worker = new CodexCliSummaryWorker(settings)
+
+    await expect(worker.summarize(summaryRequest(1_000))).rejects.toThrow()
+  })
+
+  test("skips malformed transcript lines", async () => {
+    const root = await mkdtemp(join(tmpdir(), "read-shunt-transcript-"))
+    const path = join(root, "transcript.jsonl")
+    await Bun.write(path, `${JSON.stringify({ role: "user", content: "Review exports." })}\ninvalid\n`)
+
+    expect(await readCurrentTask(path)).toBe("Review exports.")
+  })
+
   test("runs the Codex hook entry point with an isolated worker", async () => {
     const stateDirectory = await mkdtemp(join(tmpdir(), "read-shunt-codex-main-"))
     const fixture = join(import.meta.dir, "fixtures", "fake-codex")
@@ -145,3 +164,12 @@ describe("Codex adapter", () => {
     expect(output.reason).toContain("`value`, line 1")
   })
 })
+
+function summaryRequest(timeoutMs: number): SummaryRequest {
+  return {
+    candidate: { path: "large.ts", content: largeOutput, lines: 500, truncated: false },
+    task: "Review exports.",
+    maxSummaryChars: 4_000,
+    timeoutMs,
+  }
+}

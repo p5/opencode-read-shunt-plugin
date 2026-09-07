@@ -15,7 +15,7 @@ const largeContent = "export function value() { return 42 }\n".repeat(500)
 
 type HarnessOptions = {
   plugin?: Readonly<Record<string, unknown>>
-  generate?: () => Promise<{ text: string }>
+  generate?: (...arguments_: any[]) => Promise<{ text: string }>
   storageGet?: (key: string) => Promise<unknown>
   storageSet?: (key: string, value: unknown) => Promise<void>
 }
@@ -121,13 +121,22 @@ describe("OpenCode Promise plugin contract", () => {
     const smallPath = join(fixtureRoot, "small.txt")
     await Bun.write(largePath, "line\n".repeat(800))
     await Bun.write(smallPath, "line\n".repeat(100))
-    const harness = await setupHarness()
+    const harness = await setupHarness({ plugin: { thresholdChars: 1_000_000 } })
 
     await expect(harness.runBefore(beforeEvent(`cat ${largePath}`))).rejects.toThrow("read-shunt blocked bash")
     await expect(harness.runBefore(beforeEvent(`cat ${smallPath}`))).resolves.toBeUndefined()
     await expect(harness.runBefore(beforeEvent(`cat ${largePath} | grep line`))).resolves.toBeUndefined()
     await expect(harness.runBefore(beforeEvent("cat /tmp/read-shunt-does-not-exist"))).resolves.toBeUndefined()
     await expect(harness.runBefore(beforeEvent(`cat ${largePath}`, "build"))).resolves.toBeUndefined()
+  })
+
+  test("blocks a large one-line file", async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), "read-shunt-bash-chars-"))
+    const largePath = join(fixtureRoot, "large.txt")
+    await Bun.write(largePath, "x".repeat(101))
+    const harness = await setupHarness()
+
+    await expect(harness.runBefore(beforeEvent(`cat ${largePath}`))).rejects.toThrow("read-shunt blocked bash")
   })
 
   test("handles official events and accumulates session savings", async () => {
@@ -140,8 +149,8 @@ describe("OpenCode Promise plugin contract", () => {
     await harness.run(first)
     await harness.run(second)
 
-    expect(visibleText(first)).toContain("session: 1 shunts")
-    expect(visibleText(second)).toContain("session: 2 shunts")
+    expect(visibleText(first)).toContain("session estimate: 1 shunts")
+    expect(visibleText(second)).toContain("session estimate: 2 shunts")
     expect(harness.sessionCalls()).toBe(2)
     expect(harness.stored.get("read-shunt/session/ses_contract")).toMatchObject({ shunts: 2 })
     const stats = (await readFile(statsFile, "utf8"))
@@ -187,6 +196,21 @@ describe("OpenCode Promise plugin contract", () => {
       await harness.run(target)
       expect(target.result.content).toBe(original)
     }
+  })
+
+  test("aborts OpenCode generation after timeout", async () => {
+    let signal: AbortSignal | undefined
+    const harness = await setupHarness({
+      generate: async (_input, options) => {
+        signal = options.signal
+        return new Promise(() => undefined)
+      },
+      plugin: { generationTimeoutMs: 5 },
+    })
+
+    await harness.run(completedEvent())
+
+    expect(signal?.aborted).toBeTrue()
   })
 
   test("keeps replacement when statistics fail", async () => {

@@ -63,7 +63,7 @@ export function resolvePiConfig(
 
 async function readConfig(path: string): Promise<PiFileConfig> {
   try {
-    const value = JSON.parse(await readFile(path, "utf8")) as unknown
+    const value: unknown = JSON.parse(await readFile(path, "utf8"))
     return isRecord(value) ? value : {}
   } catch {
     return {}
@@ -81,5 +81,9 @@ function stringOr(value: unknown, fallback: string): string {
 }
 
 function reasoningEffort(value: unknown): ThinkingLevel {
-  return reasoningEfforts.includes(value as ThinkingLevel) ? (value as ThinkingLevel) : "low"
+  return isReasoningEffort(value) ? value : "low"
+}
+
+function isReasoningEffort(value: unknown): value is ThinkingLevel {
+  return typeof value === "string" && (reasoningEfforts as readonly string[]).includes(value)
 }

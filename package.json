@@ -41,8 +41,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "check:build": "bun build src/index.ts src/codex/main.ts extensions/read-shunt.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @earendil-works/pi-ai --external @earendil-works/pi-coding-agent && tsc -p tsconfig.build.json",
+    "check:build": "bun scripts/build.ts && tsc -p tsconfig.build.json",
+    "check:package": "publint",
     "eval:live": "bun run eval/live.ts",
+    "lint": "oxlint src test scripts eval",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
@@ -58,6 +60,8 @@
     "@earendil-works/pi-coding-agent": "^0.80.7",
     "@types/bun": "latest",
     "@types/json-schema": "latest",
+    "oxlint": "^1.15.0",
+    "publint": "^0.3.24",
     "typescript": "latest"
   },
   "engines": {

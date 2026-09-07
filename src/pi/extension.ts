@@ -8,25 +8,36 @@ export function registerPiExtension(
   pi: ExtensionAPI,
   configLoader: PiConfigLoader = loadPiConfig,
 ): void {
-  let cwd: string | undefined
-  let adapter: PiAdapter | undefined
+  const adapters = new Map<string, Promise<PiAdapter>>()
 
   const adapterFor = async (context: ExtensionContext): Promise<PiAdapter> => {
-    if (!adapter || cwd !== context.cwd) {
-      cwd = context.cwd
-      adapter = new PiAdapter(await configLoader(context.cwd))
+    let pending = adapters.get(context.cwd)
+    if (!pending) {
+      pending = configLoader(context.cwd).then((config) => new PiAdapter(config))
+      adapters.set(context.cwd, pending)
     }
-    return adapter
+    try {
+      return await pending
+    } catch (error) {
+      if (adapters.get(context.cwd) === pending) adapters.delete(context.cwd)
+      throw error
+    }
   }
 
   pi.on("session_start", async (_event, context) => {
-    await adapterFor(context)
+    try {
+      await adapterFor(context)
+    } catch (error) {
+      console.warn(`read-shunt failed open: ${errorMessage(error)}`)
+      return undefined
+    }
   })
   pi.on("tool_result", async (event, context) => {
     try {
       return await (await adapterFor(context)).handle({ event, context })
     } catch (error) {
       console.warn(`read-shunt failed open: ${errorMessage(error)}`)
+      return undefined
     }
   })
 }

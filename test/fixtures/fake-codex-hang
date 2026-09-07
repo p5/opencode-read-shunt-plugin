@@ -1,0 +1,9 @@
+#!/bin/sh
+trap '' TERM
+while IFS= read -r line; do
+  :
+done
+exec 1>&-
+while :; do
+  :
+done

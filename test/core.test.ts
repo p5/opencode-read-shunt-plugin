@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import {
-  createReplacement,
-  withTimeout,
-} from "../src/core"
+import { createReplacement } from "../src/core"
 import { resolveOpenCodeConfig } from "../src/opencode/config"
 import {
   applyReplacement,
@@ -25,7 +22,7 @@ function event(input: Record<string, unknown> = { path: "src/large.ts" }): Compl
       content: [{ type: "text", text: content }],
       metadata: {},
     },
-  }
+  } as unknown as CompletedToolEvent
 }
 
 describe("core", () => {
@@ -37,10 +34,10 @@ describe("core", () => {
     expect(replacement).toBeDefined()
     applyReplacement(target, candidate!, replacement!)
 
-    const visible = (target.result.content as Array<{ text: string }>)[0]!.text
+    const visible = (target.result.content as unknown as Array<{ text: string }>)[0]!.text
     expect(visible.length).toBe(replacement!.replacementChars)
     expect(replacement!.savedChars).toBe(content.length - visible.length)
-    expect(visible).toContain("session: 3 shunts")
+    expect(visible).toContain("session estimate: 3 shunts")
   })
 
   test("matches the Spotify read routing matrix", () => {
@@ -68,7 +65,7 @@ describe("core", () => {
       ["cat -n /tmp/large.txt", path],
       ["head /tmp/large.txt", path],
       ["head -100 /tmp/large.txt", path],
-      ["head -n 5 /tmp/large.txt", "5"],
+      ["head -n 5 /tmp/large.txt", path],
       ["tail /tmp/large.txt", path],
       ["less /tmp/large.txt", path],
       ["more /tmp/large.txt", path],
@@ -146,7 +143,4 @@ describe("core", () => {
     expect(createReplacement(content.length, "  \n", 4_000, { shunts: 0, savedChars: 0 })).toBeUndefined()
   })
 
-  test("times out stalled generation", async () => {
-    await expect(withTimeout(new Promise(() => undefined), 5)).rejects.toThrow("generation timed out after 5 ms")
-  })
 })
