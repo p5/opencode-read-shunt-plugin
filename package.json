@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-read-shunt",
+  "version": "0.1.0",
+  "description": "Reduce large OpenCode read results before they enter the main model context.",
+  "type": "module",
+  "license": "MIT",
+  "author": "p5",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p5/opencode-read-shunt-plugin.git"
+  },
+  "homepage": "https://github.com/p5/opencode-read-shunt-plugin#readme",
+  "bugs": "https://github.com/p5/opencode-read-shunt-plugin/issues",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "token-optimization"
+  ],
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "benchmarks",
+    "server.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check:build": "bun build src/index.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin && tsc -p tsconfig.build.json",
+    "eval:live": "bun run eval/live.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "beta"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/json-schema": "latest",
+    "typescript": "latest"
+  },
+  "engines": {
+    "bun": ">=1.2"
+  }
+}

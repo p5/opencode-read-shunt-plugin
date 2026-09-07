@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-07",
+  "opencodeVersion": "0.0.0-beta-19234",
+  "fixture": "/var/home/admin/opencode/packages/core/src/session.ts",
+  "task": "Report only names in the exported Interface",
+  "mainModel": "google-vertex/claude-sonnet-4-6@default#low",
+  "workerModel": "google-vertex/gemini-2.5-flash-lite",
+  "baseline": {
+    "sessionID": "ses_f83adbd2dffejn0HbwA5ws0NBs",
+    "toolPayloadChars": 41524,
+    "mainSessionCostUsd": 0.0987342,
+    "cacheWriteTokens": 23622,
+    "correct": true
+  },
+  "shunted": {
+    "sessionID": "ses_f83ae34aaffef61p76MBAsf2s4",
+    "toolPayloadChars": 423,
+    "mainSessionCostUsd": 0.0404283,
+    "cacheWriteTokens": 7712,
+    "workerLatencyMs": 981,
+    "correct": true
+  },
+  "measuredReduction": {
+    "toolPayloadPercent": 98.98,
+    "mainSessionCostPercent": 59.05,
+    "cacheWriteTokensPercent": 67.35
+  },
+  "limits": [
+    "The generation API did not report worker usage.",
+    "Main-session cost excludes worker cost.",
+    "This benchmark does not prove total cost savings."
+  ]
+}
