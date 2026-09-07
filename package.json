@@ -56,8 +56,8 @@
     "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "^0.80.7",
-    "@earendil-works/pi-coding-agent": "^0.80.7",
+    "@earendil-works/pi-ai": "latest",
+    "@earendil-works/pi-coding-agent": "latest",
     "@types/bun": "latest",
     "@types/json-schema": "latest",
     "oxlint": "^1.15.0",
