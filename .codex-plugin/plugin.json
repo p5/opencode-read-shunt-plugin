@@ -1,0 +1,24 @@
+{
+  "name": "read-shunt-plugin",
+  "version": "0.2.0",
+  "description": "Reduce large shell-read results before they enter Codex context.",
+  "author": {
+    "name": "p5"
+  },
+  "homepage": "https://github.com/p5/read-shunt-plugin",
+  "repository": "https://github.com/p5/read-shunt-plugin",
+  "license": "MIT",
+  "keywords": ["codex", "hooks", "token-optimization"],
+  "interface": {
+    "displayName": "Read Shunt",
+    "shortDescription": "Reduce large shell-read results.",
+    "longDescription": "Use a low-cost Codex worker to summarize large shell-read results before the main model receives them.",
+    "developerName": "p5",
+    "category": "Developer Tools",
+    "capabilities": ["Bash hooks", "Token optimization"],
+    "websiteURL": "https://github.com/p5/read-shunt-plugin",
+    "defaultPrompt": [
+      "Explain how Read Shunt reduces this session's context use."
+    ]
+  }
+}

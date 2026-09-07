@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "opencode-read-shunt",
+      "name": "read-shunt-plugin",
       "dependencies": {
         "@opencode-ai/plugin": "beta",
       },

@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-07",
+  "codexVersion": "0.153.4",
+  "fixture": "bun.lock",
+  "task": "Run cat and report whether the model-visible result has the read-shunt marker",
+  "mainModel": "gpt-5.6-luna",
+  "workerModel": "gpt-5.6-luna",
+  "baseline": {
+    "inputTokens": 43882,
+    "cachedInputTokens": 12247,
+    "markerVisible": false
+  },
+  "shunted": {
+    "inputTokens": 25217,
+    "cachedInputTokens": 12249,
+    "markerVisible": true,
+    "toolResponseChars": 40104,
+    "replacementChars": 1857,
+    "workerLatencyMs": 5570
+  },
+  "measuredReduction": {
+    "inputTokens": 18665,
+    "inputTokensPercent": 42.53,
+    "modelVisibleToolResponsePercent": 95.37
+  },
+  "limits": [
+    "The Codex event stream still contains raw command output for telemetry.",
+    "The model received the replacement output.",
+    "The hook did not report worker token usage.",
+    "The input-token comparison uses 2 separate ephemeral sessions."
+  ]
+}

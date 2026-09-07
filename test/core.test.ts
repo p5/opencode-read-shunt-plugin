@@ -1,13 +1,15 @@
 import { describe, expect, test } from "bun:test"
 import {
+  createReplacement,
+  withTimeout,
+} from "../src/core"
+import { resolveOpenCodeConfig } from "../src/opencode/config"
+import {
   applyReplacement,
   bashReadPath,
-  createReplacement,
   readCandidate,
-  resolveConfig,
-  withTimeout,
   type CompletedToolEvent,
-} from "../src/core"
+} from "../src/opencode/events"
 
 const content = "export function value() { return 42 }\n".repeat(500)
 
@@ -29,7 +31,7 @@ function event(input: Record<string, unknown> = { path: "src/large.ts" }): Compl
 describe("core", () => {
   test("replaces a large read with a smaller complete payload", () => {
     const target = event()
-    const candidate = readCandidate(target, resolveConfig({ thresholdChars: 100 }))
+    const candidate = readCandidate(target, resolveOpenCodeConfig({ thresholdChars: 100 }))
     expect(candidate).toBeDefined()
     const replacement = createReplacement(content.length, "Summary at line 1", 4_000, { shunts: 2, savedChars: 8_000 })
     expect(replacement).toBeDefined()
@@ -42,7 +44,7 @@ describe("core", () => {
   })
 
   test("matches the Spotify read routing matrix", () => {
-    const config = resolveConfig({ thresholdChars: 100 })
+    const config = resolveOpenCodeConfig({ thresholdChars: 100 })
     const cases: Array<{ name: string; target: CompletedToolEvent; shunt: boolean }> = [
       { name: "large full read", target: event(), shunt: true },
       { name: "offset", target: event({ path: "src/large.ts", offset: 100 }), shunt: false },
@@ -59,7 +61,7 @@ describe("core", () => {
   })
 
   test("matches the Spotify Bash routing matrix", () => {
-    const config = resolveConfig({ allowedAgents: ["explore"] })
+    const config = resolveOpenCodeConfig({ allowedAgents: ["explore"] })
     const path = "/tmp/large.txt"
     const cases = [
       ["cat /tmp/large.txt", path],
@@ -96,7 +98,7 @@ describe("core", () => {
   test("allows exact threshold and shunts above it", () => {
     const atThreshold = "line\n".repeat(349) + "line"
     const aboveThreshold = `${atThreshold}\nline`
-    const config = resolveConfig({ thresholdChars: 1_000_000, thresholdLines: 350 })
+    const config = resolveOpenCodeConfig({ thresholdChars: 1_000_000, thresholdLines: 350 })
     const target = event()
     target.result.content = [{ type: "text", text: atThreshold }]
     expect(readCandidate(target, config)).toBeUndefined()
@@ -108,15 +110,15 @@ describe("core", () => {
     const text = "line\n".repeat(250)
     const target = event()
     target.result.content = text
-    expect(readCandidate(target, resolveConfig({ thresholdChars: 1_000_000, thresholdLines: 200 }))).toBeDefined()
-    expect(readCandidate(target, resolveConfig({ thresholdChars: 1_000_000, thresholdLines: 500 }))).toBeUndefined()
+    expect(readCandidate(target, resolveOpenCodeConfig({ thresholdChars: 1_000_000, thresholdLines: 200 }))).toBeDefined()
+    expect(readCandidate(target, resolveOpenCodeConfig({ thresholdChars: 1_000_000, thresholdLines: 500 }))).toBeUndefined()
     expect(
-      readCandidate(target, resolveConfig({ thresholdChars: 1_000_000, thresholdLines: "invalid" })),
+      readCandidate(target, resolveOpenCodeConfig({ thresholdChars: 1_000_000, thresholdLines: "invalid" })),
     ).toBeUndefined()
   })
 
   test("bypasses protected results and agents", () => {
-    const config = resolveConfig({ thresholdChars: 100 })
+    const config = resolveOpenCodeConfig({ thresholdChars: 100 })
     const build = event()
     build.agent = "build"
     const reviewer = event()

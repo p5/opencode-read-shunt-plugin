@@ -1,0 +1,19 @@
+{
+  "description": "Summarize large Bash file reads with a low-cost Codex worker.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$PLUGIN_ROOT/src/codex/main.ts\"",
+            "commandWindows": "bun \"%PLUGIN_ROOT%\\src\\codex\\main.ts\"",
+            "timeout": 45,
+            "statusMessage": "Shunting large read output"
+          }
+        ]
+      }
+    ]
+  }
+}

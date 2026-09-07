@@ -1,0 +1,6 @@
+#!/bin/sh
+while IFS= read -r line; do
+  :
+done
+printf '%s\n' '{"type":"thread.started","thread_id":"thr_worker"}'
+printf '%s\n' '{"type":"item.completed","item":{"type":"agent_message","text":"- `value`, line 1: returns 42"}}'

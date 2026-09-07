@@ -1,0 +1,13 @@
+{
+  "date": "2026-09-07",
+  "host": "codex",
+  "test": "synthetic repeated source read",
+  "model": "openai/gpt-5.6-luna",
+  "originalChars": 28413,
+  "replacementChars": 3138,
+  "savedChars": 25275,
+  "mainContextReductionPercent": 88.95,
+  "estimatedSavedMainContextTokens": 6319,
+  "latencyMs": 7561,
+  "workerUsage": "not reported"
+}

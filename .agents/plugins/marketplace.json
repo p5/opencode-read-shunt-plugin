@@ -1,0 +1,21 @@
+{
+  "name": "read-shunt-plugin",
+  "interface": {
+    "displayName": "Read Shunt"
+  },
+  "plugins": [
+    {
+      "name": "read-shunt-plugin",
+      "source": {
+        "source": "local",
+        "path": "."
+      },
+      "description": "Reduce large shell-read results before they enter Codex context.",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
