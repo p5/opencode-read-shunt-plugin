@@ -28,6 +28,13 @@ export type CompletedToolEvent = {
   result: ToolResult
 }
 
+export type BeforeToolEvent = {
+  tool: string
+  sessionID: string
+  agent: string
+  input: unknown
+}
+
 export type ReadCandidate = {
   path: string
   content: string
@@ -97,6 +104,23 @@ export function readCandidate(event: CompletedToolEvent, config: ReadShuntConfig
     lines: content.text.split("\n").length,
   }
   return exceedsThreshold(candidate, config) ? candidate : undefined
+}
+
+export function bashReadPath(event: BeforeToolEvent, config: ReadShuntConfig): string | undefined {
+  if (event.tool !== "bash" || !config.allowedAgents.includes(event.agent)) return
+  if (!isRecord(event.input) || typeof event.input.command !== "string") return
+
+  const command = event.input.command.trim()
+  if (!command || command.includes("|") || command.includes(">")) return
+
+  const match = /^(?:cat|head|tail|less|more)\s+(.+)$/.exec(command)
+  if (!match) return
+
+  const path = match[1]!
+    .split(/\s+/)
+    .find((argument) => !argument.startsWith("-"))
+    ?.replaceAll(/["']/g, "")
+  return path || undefined
 }
 
 export function buildSummaryPrompt(candidate: ReadCandidate, task: string, maxSummaryChars: number): string {

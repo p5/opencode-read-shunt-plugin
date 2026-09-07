@@ -1,8 +1,10 @@
-import { mkdir, appendFile } from "node:fs/promises"
-import { dirname } from "node:path"
+import { createReadStream } from "node:fs"
+import { mkdir, appendFile, stat } from "node:fs/promises"
+import { dirname, isAbsolute, resolve } from "node:path"
 import { Plugin } from "@opencode-ai/plugin"
 import {
   applyReplacement,
+  bashReadPath,
   buildSummaryPrompt,
   createReplacement,
   parseSessionTask,
@@ -10,6 +12,7 @@ import {
   resolveConfig,
   withTimeout,
   type CompletedToolEvent,
+  type BeforeToolEvent,
   type ReadCandidate,
   type ReadShuntConfig,
   type Replacement,
@@ -20,6 +23,9 @@ const plugin = Plugin.define({
   id: "ReadShunt",
   setup: async (context) => {
     const config = resolveConfig(context.options)
+    await context.tool.hook("execute.before", async (event) => {
+      await guardBashRead(event, config, context.location.directory)
+    })
     await context.tool.hook("execute.after", async (event) => {
       if (event.status !== "completed") return
       try {
@@ -30,6 +36,36 @@ const plugin = Plugin.define({
     })
   },
 })
+
+async function guardBashRead(event: BeforeToolEvent, config: ReadShuntConfig, cwd: string): Promise<void> {
+  const inputPath = bashReadPath(event, config)
+  if (!inputPath) return
+
+  const path = isAbsolute(inputPath) ? inputPath : resolve(cwd, inputPath)
+  try {
+    const info = await stat(path)
+    if (!info.isFile()) return
+    if (!(await exceedsLineThreshold(path, config.thresholdLines))) return
+  } catch {
+    return
+  }
+
+  throw new Error(
+    `read-shunt blocked ${event.tool}: ${inputPath} exceeds ${config.thresholdLines} lines. ` +
+      "Use the read tool without offset or limit so ReadShunt can summarize it. " +
+      "Use a targeted pipeline or redirected command when exact output is required.",
+  )
+}
+
+async function exceedsLineThreshold(path: string, threshold: number): Promise<boolean> {
+  let lines = 0
+  for await (const chunk of createReadStream(path)) {
+    for (const byte of chunk) {
+      if (byte === 10 && ++lines > threshold) return true
+    }
+  }
+  return false
+}
 
 type ReadShuntServices = Pick<Plugin.Context, "generate" | "session" | "storage">
 

@@ -10,6 +10,7 @@ The plugin follows the bulk-reader design in
 [Spotify's Shunt article](https://engineering.atspotify.com/2026/9/portal-by-spotify-cut-my-claude-code-token-usage-by-90):
 
 - A hook enforces routing for large, broad reads.
+- A Bash hook blocks direct `cat`, `head`, `tail`, `less`, and `more` reads of large files.
 - Reads with `offset` or `limit` keep exact content.
 - A low-cost worker gets the file and current question in one stateless call.
 - The main model gets only the worker response.
@@ -18,7 +19,7 @@ The plugin follows the bulk-reader design in
 OpenCode runs this hook after local file I/O but before the next model request.
 Thus, the full file does not enter the main model context.
 
-This package handles one file per call. It does not intercept shell reads or generate code.
+This package handles one file per call. It does not generate code.
 
 ## Install
 
@@ -46,7 +47,9 @@ The plugin bypasses these reads:
 - `AGENTS.md` and `SKILL.md` files.
 - Results where the complete replacement is not smaller than original model-visible content.
 
-Any error or timeout returns original result.
+The Bash hook allows pipelines and output redirects. These commands target output or keep it outside model context.
+
+Any worker error or timeout returns the original read result.
 
 ## Configuration
 

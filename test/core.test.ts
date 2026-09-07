@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   applyReplacement,
+  bashReadPath,
   createReplacement,
   readCandidate,
   resolveConfig,
@@ -55,6 +56,41 @@ describe("core", () => {
     for (const item of cases) {
       expect(readCandidate(item.target, config) !== undefined, item.name).toBe(item.shunt)
     }
+  })
+
+  test("matches the Spotify Bash routing matrix", () => {
+    const config = resolveConfig({ allowedAgents: ["explore"] })
+    const path = "/tmp/large.txt"
+    const cases = [
+      ["cat /tmp/large.txt", path],
+      ["cat -n /tmp/large.txt", path],
+      ["head /tmp/large.txt", path],
+      ["head -100 /tmp/large.txt", path],
+      ["head -n 5 /tmp/large.txt", "5"],
+      ["tail /tmp/large.txt", path],
+      ["less /tmp/large.txt", path],
+      ["more /tmp/large.txt", path],
+      ['cat "/tmp/large.txt"', path],
+      ["cat /tmp/large.txt | grep export", undefined],
+      ["cat /tmp/large.txt > /tmp/out.txt", undefined],
+      ["git status", undefined],
+      ["grep export /tmp/large.txt", undefined],
+      ["", undefined],
+    ] as const
+
+    for (const [command, expected] of cases) {
+      expect(
+        bashReadPath({ tool: "bash", sessionID: "ses_test", agent: "explore", input: { command } }, config),
+        command,
+      ).toBe(expected)
+    }
+    expect(
+      bashReadPath({ tool: "bash", sessionID: "ses_test", agent: "build", input: { command: `cat ${path}` } }, config),
+    ).toBeUndefined()
+    expect(bashReadPath({ tool: "bash", sessionID: "ses_test", agent: "explore", input: {} }, config)).toBeUndefined()
+    expect(
+      bashReadPath({ tool: "read", sessionID: "ses_test", agent: "explore", input: { command: `cat ${path}` } }, config),
+    ).toBeUndefined()
   })
 
   test("allows exact threshold and shunts above it", () => {

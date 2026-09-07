@@ -9,6 +9,7 @@ type ToolHookCallback = Parameters<Plugin.Context["tool"]["hook"]>[1]
 type ToolHookEvent = Parameters<ToolHookCallback>[0]
 type CompletedToolHookEvent = Extract<ToolHookEvent, { status: "completed" }>
 type FailedToolHookEvent = Extract<ToolHookEvent, { status: "error" }>
+type BeforeToolHookEvent = Omit<CompletedToolHookEvent, "status" | "result">
 
 const largeContent = "export function value() { return 42 }\n".repeat(500)
 
@@ -20,10 +21,12 @@ type HarnessOptions = {
 }
 
 async function setupHarness(options: HarnessOptions = {}) {
+  let before: ToolHookCallback | undefined
   let after: ToolHookCallback | undefined
   let sessionCalls = 0
   const stored = new Map<string, unknown>()
   const context = {
+    location: { directory: process.cwd() },
     options: {
       thresholdChars: 100,
       allowedAgents: ["explore"],
@@ -32,8 +35,8 @@ async function setupHarness(options: HarnessOptions = {}) {
     },
     tool: {
       hook: async (name: string, callback: ToolHookCallback) => {
-        expect(name).toBe("execute.after")
-        after = callback
+        if (name === "execute.before") before = callback
+        if (name === "execute.after") after = callback
       },
     },
     session: {
@@ -51,10 +54,22 @@ async function setupHarness(options: HarnessOptions = {}) {
 
   await readShunt.setup(context)
   return {
+    runBefore: async (event: BeforeToolHookEvent) => before!(event),
     run: async (event: ToolHookEvent) => after!(event),
     sessionCalls: () => sessionCalls,
     stored,
   }
+}
+
+function beforeEvent(command: string, agent = "explore") {
+  return {
+    tool: "bash",
+    sessionID: "ses_contract" as BeforeToolHookEvent["sessionID"],
+    agent: agent as BeforeToolHookEvent["agent"],
+    messageID: "msg_contract" as BeforeToolHookEvent["messageID"],
+    id: crypto.randomUUID() as BeforeToolHookEvent["id"],
+    input: { command },
+  } satisfies BeforeToolHookEvent
 }
 
 function completedEvent(
@@ -100,6 +115,21 @@ function visibleText(event: ReturnType<typeof completedEvent>): string {
 }
 
 describe("OpenCode Promise plugin contract", () => {
+  test("blocks direct Bash reads of large files", async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), "read-shunt-bash-"))
+    const largePath = join(fixtureRoot, "large.txt")
+    const smallPath = join(fixtureRoot, "small.txt")
+    await Bun.write(largePath, "line\n".repeat(800))
+    await Bun.write(smallPath, "line\n".repeat(100))
+    const harness = await setupHarness()
+
+    await expect(harness.runBefore(beforeEvent(`cat ${largePath}`))).rejects.toThrow("read-shunt blocked bash")
+    await expect(harness.runBefore(beforeEvent(`cat ${smallPath}`))).resolves.toBeUndefined()
+    await expect(harness.runBefore(beforeEvent(`cat ${largePath} | grep line`))).resolves.toBeUndefined()
+    await expect(harness.runBefore(beforeEvent("cat /tmp/read-shunt-does-not-exist"))).resolves.toBeUndefined()
+    await expect(harness.runBefore(beforeEvent(`cat ${largePath}`, "build"))).resolves.toBeUndefined()
+  })
+
   test("handles official events and accumulates session savings", async () => {
     const statsRoot = await mkdtemp(join(tmpdir(), "read-shunt-test-"))
     const statsFile = join(statsRoot, "nested", "stats.jsonl")
