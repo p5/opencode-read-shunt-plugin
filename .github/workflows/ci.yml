@@ -48,3 +48,22 @@ jobs:
           bun run typecheck
           bun test
           bun run check:build
+
+  current-pi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: 1.4.2
+      - name: Install current Pi packages
+        run: |
+          bun install --frozen-lockfile
+          bun update @earendil-works/pi-ai@latest @earendil-works/pi-coding-agent@latest
+      - name: Check current Pi
+        run: |
+          bun run typecheck
+          bun test
+          bun run check:build

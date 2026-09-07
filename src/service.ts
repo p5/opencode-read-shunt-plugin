@@ -9,7 +9,7 @@ export class ReadShuntService {
 
   async shunt(request: ShuntRequest): Promise<ShuntResult | undefined> {
     const startedAt = performance.now()
-    const generatedText = await this.worker.summarize({
+    const summary = await this.worker.summarize({
       candidate: request.candidate,
       task: request.task,
       maxSummaryChars: request.config.maxSummaryChars,
@@ -18,7 +18,7 @@ export class ReadShuntService {
     const previous = await this.savings.load(request.sessionID)
     const replacement = createReplacement(
       request.candidate.content.length,
-      generatedText,
+      summary.text,
       request.config.maxSummaryChars,
       previous,
     )
@@ -40,7 +40,7 @@ export class ReadShuntService {
       sessionSavedChars: replacement.session.savedChars,
       sessionEstimatedSavedTokens: estimateTokens(replacement.session.savedChars),
       latencyMs: Math.round(performance.now() - startedAt),
-      workerUsage: "not reported",
+      workerUsage: summary.usage ?? "not reported",
     }
 
     const writes = await Promise.allSettled([

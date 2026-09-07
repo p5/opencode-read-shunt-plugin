@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
-import type { HostAdapter, SummaryRequest, SummaryWorker } from "../contracts.js"
+import type { HostAdapter, SummaryRequest, SummaryResult, SummaryWorker } from "../contracts.js"
 import { isRecord, resolvePolicyConfig, selectCandidate, type ShuntPolicyConfig } from "../core.js"
+import { FileSavingsStore } from "../file-savings-store.js"
 import { ReadShuntService } from "../service.js"
-import { FileSavingsStore } from "./file-savings-store.js"
+import { parseBroadShellRead } from "../shell-read.js"
 
 export type CodexHookInput = {
   session_id?: unknown
@@ -134,13 +135,14 @@ async function readConfig(path: string): Promise<CodexFileConfig> {
 export function codexCandidate(input: CodexHookInput, config: ShuntPolicyConfig) {
   if (input.hook_event_name !== "PostToolUse" || input.tool_name !== "Bash") return
   if (!isRecord(input.tool_input) || typeof input.tool_input.command !== "string") return
-  if (!isBroadReadCommand(input.tool_input.command)) return
+  const read = parseBroadShellRead(input.tool_input.command)
+  if (!read) return
   const content = textResponse(input.tool_response)
   if (!content) return
 
   return selectCandidate(
     {
-      path: readTarget(input.tool_input.command),
+      path: read.path,
       content,
     },
     config,
@@ -148,9 +150,7 @@ export function codexCandidate(input: CodexHookInput, config: ShuntPolicyConfig)
 }
 
 export function isBroadReadCommand(command: string): boolean {
-  const trimmed = command.trim()
-  if (!trimmed || /[|>&;\n]/.test(trimmed)) return false
-  return /^(?:command\s+)?(?:cat|less|more)(?:\s|$)/.test(trimmed)
+  return parseBroadShellRead(command) !== undefined
 }
 
 export function parseCodexOutput(output: string): string | undefined {
@@ -172,7 +172,7 @@ class CodexCliSummaryWorker implements SummaryWorker {
     this.model = `openai/${config.codexModel}`
   }
 
-  async summarize(request: SummaryRequest): Promise<string> {
+  async summarize(request: SummaryRequest): Promise<SummaryResult> {
     const child = Bun.spawn(buildCodexArguments(this.config), {
       stdin: "pipe",
       stdout: "pipe",
@@ -197,7 +197,7 @@ class CodexCliSummaryWorker implements SummaryWorker {
       }
       const message = parseCodexOutput(output)
       if (!message) throw new Error("codex worker returned no agent message")
-      return message
+      return { text: message }
     } finally {
       if (timeout) clearTimeout(timeout)
     }
@@ -288,15 +288,6 @@ function textResponse(value: unknown): string | undefined {
       if (text) return text
     }
   }
-}
-
-function readTarget(command: string): string {
-  const argumentsOnly = command.trim().replace(/^(?:command\s+)?(?:cat|less|more)\s*/, "")
-  const target = argumentsOnly
-    .split(/\s+/)
-    .filter((argument) => !argument.startsWith("-"))
-    .at(-1)
-  return (target ?? command).replaceAll(/["']/g, "").slice(0, 500)
 }
 
 function codexStateDirectory(environment: NodeJS.ProcessEnv): string {

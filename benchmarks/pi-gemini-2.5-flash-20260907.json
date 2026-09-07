@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-07",
+  "piVersion": "0.80.7",
+  "hostModel": "google-vertex/gemini-2.5-flash",
+  "workerModel": "google-vertex/gemini-2.5-flash",
+  "reasoningEffort": "low",
+  "tool": "read",
+  "target": "bun.lock",
+  "originalChars": 51237,
+  "replacementChars": 512,
+  "savedChars": 50725,
+  "toolPayloadReductionPercent": 99.0,
+  "estimatedMainContextTokensAvoided": 12681,
+  "workerLatencyMs": 2597,
+  "workerUsage": {
+    "inputTokens": 149,
+    "outputTokens": 399,
+    "reasoningTokens": 285,
+    "cacheReadTokens": 26586,
+    "cacheWriteTokens": 0,
+    "costUsd": 0.00183978
+  },
+  "correctness": {
+    "requiredExactPackageNames": 3,
+    "foundExactPackageNames": 3,
+    "passed": true
+  },
+  "notes": "Payload reduction measures the result sent to the main model. Worker usage and cost are reported separately."
+}

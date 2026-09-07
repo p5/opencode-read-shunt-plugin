@@ -1,6 +1,6 @@
 import type { ReadCandidate, Replacement, SessionSavings, ShuntPolicyConfig } from "./core.js"
 
-export type HostName = "codex" | "opencode"
+export type HostName = "codex" | "opencode" | "pi"
 
 export interface HostAdapter<TInput, TOutput> {
   readonly host: HostName
@@ -16,7 +16,21 @@ export type SummaryRequest = {
 
 export interface SummaryWorker {
   readonly model: string
-  summarize(request: SummaryRequest): Promise<string>
+  summarize(request: SummaryRequest): Promise<SummaryResult>
+}
+
+export type SummaryResult = {
+  text: string
+  usage?: WorkerUsage
+}
+
+export type WorkerUsage = {
+  inputTokens: number
+  outputTokens: number
+  reasoningTokens?: number
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
+  cost?: number
 }
 
 export interface SavingsStore {
@@ -41,7 +55,7 @@ export type SavingsEntry = {
   sessionSavedChars: number
   sessionEstimatedSavedTokens: number
   latencyMs: number
-  workerUsage: string
+  workerUsage: WorkerUsage | "not reported"
 }
 
 export type ShuntRequest = {

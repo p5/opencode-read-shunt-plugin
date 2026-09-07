@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "read-shunt-plugin",
-  "version": "0.2.0",
-  "description": "Reduce large read results before they enter OpenCode or Codex context.",
+  "version": "0.3.0",
+  "description": "Reduce large read results before they enter OpenCode, Codex, or Pi context.",
   "type": "module",
   "license": "MIT",
   "author": "p5",
@@ -17,6 +17,8 @@
     "opencode-plugin",
     "codex",
     "codex-plugin",
+    "pi",
+    "pi-package",
     "token-optimization"
   ],
   "main": "./src/index.ts",
@@ -29,6 +31,7 @@
   },
   "files": [
     "src",
+    "extensions",
     "hooks",
     ".codex-plugin",
     ".agents",
@@ -38,7 +41,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "check:build": "bun build src/index.ts src/codex/main.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin && tsc -p tsconfig.build.json",
+    "check:build": "bun build src/index.ts src/codex/main.ts extensions/read-shunt.ts --outdir dist --target bun --format esm --external @opencode-ai/plugin --external @earendil-works/pi-ai --external @earendil-works/pi-coding-agent && tsc -p tsconfig.build.json",
     "eval:live": "bun run eval/live.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
@@ -46,12 +49,23 @@
   "dependencies": {
     "@opencode-ai/plugin": "beta"
   },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
   "devDependencies": {
+    "@earendil-works/pi-ai": "^0.80.7",
+    "@earendil-works/pi-coding-agent": "^0.80.7",
     "@types/bun": "latest",
     "@types/json-schema": "latest",
     "typescript": "latest"
   },
   "engines": {
     "bun": ">=1.2"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/read-shunt.ts"
+    ]
   }
 }

@@ -2,7 +2,14 @@ import { createReadStream } from "node:fs"
 import { appendFile, mkdir, stat } from "node:fs/promises"
 import { dirname, isAbsolute, resolve } from "node:path"
 import type { Plugin } from "@opencode-ai/plugin"
-import type { HostAdapter, SavingsEntry, SavingsStore, SummaryRequest, SummaryWorker } from "../contracts.js"
+import type {
+  HostAdapter,
+  SavingsEntry,
+  SavingsStore,
+  SummaryRequest,
+  SummaryResult,
+  SummaryWorker,
+} from "../contracts.js"
 import {
   withTimeout,
   type SessionSavings,
@@ -101,7 +108,7 @@ class OpenCodeSummaryWorker implements SummaryWorker {
     this.model = `${config.model.providerID}/${config.model.id}`
   }
 
-  async summarize(request: SummaryRequest): Promise<string> {
+  async summarize(request: SummaryRequest): Promise<SummaryResult> {
     const generated = await withTimeout(
       this.generate.text({
         prompt: buildOpenCodePrompt(request),
@@ -109,7 +116,7 @@ class OpenCodeSummaryWorker implements SummaryWorker {
       }),
       request.timeoutMs,
     )
-    return generated.text
+    return { text: generated.text }
   }
 }
 

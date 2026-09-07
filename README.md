@@ -1,14 +1,15 @@
-# Read Shunt for OpenCode and Codex
+# Read Shunt for OpenCode, Codex, and Pi
 
-This plugin reduces large read results before OpenCode or Codex adds them to main model context.
+This plugin reduces large read results before OpenCode, Codex, or Pi adds them to main model context.
 
 Each host has an isolated adapter:
 
 - OpenCode uses its native tool hooks and internal `generate.text` API.
 - Codex uses a `PostToolUse` Bash hook and a stateless `codex exec` worker.
+- Pi uses its native `tool_result` extension event and model registry.
 - Shared policy selects candidates, creates replacements, and calculates savings.
 
-The Codex adapter cannot load or register OpenCode hooks. The OpenCode entry point cannot load Codex hooks.
+Each host adapter imports only its host packages. Shared modules do not import host packages.
 
 ## Design
 
@@ -61,6 +62,18 @@ export READ_SHUNT_CODEX_MODEL="gpt-5.6-sol"
 The worker uses `--ignore-user-config`. This prevents nested plugin and hook execution.
 It still uses existing Codex authentication.
 
+## Install for Pi
+
+Install the extension from GitHub:
+
+```bash
+pi install git:github.com/p5/read-shunt-plugin
+```
+
+Start a new Pi session. Pi loads `extensions/read-shunt.ts` from the package.
+
+The default worker is `google-vertex/gemini-2.5-flash`. It uses Pi authentication.
+
 ## Safety rules
 
 OpenCode processes only reads from agent `explore` by default. OpenCode defines `explore` as read-only.
@@ -77,6 +90,9 @@ The OpenCode Bash hook allows pipelines and output redirects.
 
 The Codex adapter shunts only simple `cat`, `less`, and `more` commands.
 It bypasses `head`, `tail`, `sed`, `rg`, pipelines, redirects, and compound commands.
+
+The Pi adapter shunts native `read` results and simple `cat`, `less`, or `more` results.
+It bypasses ranged reads, errors, images, pipelines, redirects, compound commands, and multiple files.
 
 Any worker error or timeout returns the original read result.
 
@@ -141,15 +157,49 @@ Set environment variables before you start Codex:
 | `READ_SHUNT_TIMEOUT_MS` | `30000` |
 | `READ_SHUNT_STATS_FILE` | Host state directory |
 
+## Pi configuration
+
+Add global settings to `~/.pi/agent/read-shunt.json`.
+Add project settings to `.pi/read-shunt.json`:
+
+```json
+{
+  "thresholdChars": 12000,
+  "thresholdLines": 350,
+  "maxSummaryChars": 4000,
+  "generationTimeoutMs": 30000,
+  "model": {
+    "provider": "google-vertex",
+    "id": "gemini-2.5-flash"
+  },
+  "reasoningEffort": "low"
+}
+```
+
+Project settings replace global settings. Environment variables replace both JSON files.
+
+| Variable | Default |
+| --- | --- |
+| `READ_SHUNT_PI_PROVIDER` | `google-vertex` |
+| `READ_SHUNT_PI_MODEL` | `gemini-2.5-flash` |
+| `READ_SHUNT_PI_REASONING_EFFORT` | `low` |
+| `READ_SHUNT_THRESHOLD_CHARS` | `12000` |
+| `READ_SHUNT_THRESHOLD_LINES` | `350` |
+| `READ_SHUNT_MAX_SUMMARY_CHARS` | `4000` |
+| `READ_SHUNT_TIMEOUT_MS` | `30000` |
+| `READ_SHUNT_STATS_FILE` | `~/.local/state/pi/read-shunt/read-shunt.jsonl` |
+
 ## Savings log
 
 Each shunt writes one console line. It also appends JSON to:
 
 - OpenCode: `~/.local/state/opencode/read-shunt.jsonl`
 - Codex: plugin data directory `read-shunt.jsonl`
+- Pi: `~/.local/state/pi/read-shunt/read-shunt.jsonl`
 
 Each replacement reports current and session estimates. Estimates cover avoided main-context input only.
-The hook does not receive worker usage. Logs do not prove net cost savings.
+OpenCode and Codex logs do not include worker usage. Pi logs include worker tokens and cost.
+Result-size estimates do not prove net cost savings.
 
 ## Evals
 
@@ -164,6 +214,11 @@ An installed Codex lifecycle test used `cat bun.lock` in 2 ephemeral sessions.
 The model saw the marker only when the plugin returned the shunted result.
 Input usage fell from 43,882 tokens to 25,217 tokens, a 42.53% reduction.
 The event stream still contained raw command output for telemetry.
+
+A Pi lifecycle test used the native `read` tool on `bun.lock` with Pi 0.80.7.
+The adapter reduced 51,237 result characters to 512 characters, a 99.00% reduction.
+The final answer preserved all three required package names.
+The worker call cost $0.00183978. It completed in 2.6 seconds.
 
 The live eval uses a real main model and the configured worker model. It spends tokens.
 

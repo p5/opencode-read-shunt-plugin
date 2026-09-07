@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { mkdir, mkdtemp, readFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import type { SummaryRequest, SummaryWorker } from "../src/contracts"
+import type { SummaryRequest, SummaryResult, SummaryWorker } from "../src/contracts"
 import {
   CodexAdapter,
   buildCodexArguments,
@@ -19,8 +19,8 @@ const largeOutput = "export function value() { return 42 }\n".repeat(500)
 class FakeWorker implements SummaryWorker {
   readonly model = "openai/test-codex"
 
-  async summarize(_request: SummaryRequest): Promise<string> {
-    return "- `value`, line 1: returns 42"
+  async summarize(_request: SummaryRequest): Promise<SummaryResult> {
+    return { text: "- `value`, line 1: returns 42" }
   }
 }
 
@@ -84,6 +84,7 @@ describe("Codex adapter", () => {
     expect(isBroadReadCommand("cat file.ts")).toBeTrue()
     expect(isBroadReadCommand("cat -n file.ts")).toBeTrue()
     expect(isBroadReadCommand("less file.ts")).toBeTrue()
+    expect(isBroadReadCommand("cat one.ts two.ts")).toBeFalse()
     expect(isBroadReadCommand("cat file.ts; git status")).toBeFalse()
     expect(isBroadReadCommand("sed -n '1,20p' file.ts")).toBeFalse()
   })

@@ -1,6 +1,6 @@
 {
   "name": "read-shunt-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reduce large shell-read results before they enter Codex context.",
   "author": {
     "name": "p5"
